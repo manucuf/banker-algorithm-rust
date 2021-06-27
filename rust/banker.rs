@@ -56,7 +56,7 @@ mod rust_examples {
             v
         }
 
-        fn allocate_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
+        pub fn allocate_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
 
             let lock = &*self.m_monitor_mutex;
             //let mut monitor = lock.lock().unwrap();
@@ -92,7 +92,7 @@ mod rust_examples {
 		        if amount > available { //monitor.m_available[resource] {
 			        println!("RESOURCE NOT AVAILABLE: SUSPENDING PROCESS {}", process);
 			        //printState();
-			        self.m_monitor_cv[resource].wait(safe_monitor).unwrap();
+			        let result = self.m_monitor_cv[resource].wait(safe_monitor);
                     continue;
 		        }
 
@@ -122,7 +122,7 @@ mod rust_examples {
 	
 			        println!("UNSAFE STATE DETECTED: SUSPENDING PROCESS {}", process);
 			        //printState();
-			        self.m_monitor_cv[resource].wait(safe_monitor).unwrap();
+			        let result = self.m_monitor_cv[resource].wait(safe_monitor);
                     
 			        continue;
 		        }

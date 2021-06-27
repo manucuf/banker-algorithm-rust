@@ -8,7 +8,8 @@ mod rust_examples {
     use std::sync::{Arc, Mutex, Condvar};
 
     pub struct BankerAlgorithm<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
-        data: Arc<Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>>
+        m_monitor_mutex: Arc<Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>>,
+        m_monitor_cv: Vec<Arc<Condvar>>,
     }
 
     struct BankerAlgorithmData<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
@@ -19,7 +20,6 @@ mod rust_examples {
         m_available: [usize; NUM_RESOURCES],
         m_alloc: [[usize; NUM_RESOURCES]; NUM_PROCESSES],
         m_running: [bool; NUM_PROCESSES],
-        m_monitor_cv: Vec<Arc<Condvar>>,
     }
     
     impl<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>  {
@@ -33,9 +33,17 @@ mod rust_examples {
                 m_claim: claim.clone(),
                 m_alloc: [[0; NUM_RESOURCES]; NUM_PROCESSES],
                 m_running: [true; NUM_PROCESSES],
-                //m_monitor_mutex: BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::init_mutex(resources),
-                //m_monitor_mutex: Arc::new(Mutex::new(resources)),
-                m_monitor_cv: BankerAlgorithmData::<NUM_RESOURCES, NUM_PROCESSES>::init_cv(resources),
+            }
+        }
+    }
+
+    impl<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
+
+
+        pub fn new(resources: [usize; NUM_RESOURCES], claim: [[usize; NUM_RESOURCES]; NUM_PROCESSES]) -> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
+            BankerAlgorithm {
+                m_monitor_mutex: Arc::new(Mutex::new(BankerAlgorithmData::<NUM_RESOURCES, NUM_PROCESSES>::new(resources, claim))),
+                m_monitor_cv: BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::init_cv(resources),
             }
         }
 
@@ -47,21 +55,12 @@ mod rust_examples {
             }
             v
         }
-    }
-
-    impl<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
-
-
-        pub fn new(resources: [usize; NUM_RESOURCES], claim: [[usize; NUM_RESOURCES]; NUM_PROCESSES]) -> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
-            BankerAlgorithm {
-                data: Arc::new(Mutex::new(BankerAlgorithmData::<NUM_RESOURCES, NUM_PROCESSES>::new(resources, claim))),
-            }
-        }
 
         fn allocate_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
 
-            let lock = &*self.data;
-            let mut monitor = lock.lock().unwrap();
+            let lock = &*self.m_monitor_mutex;
+            //let mut monitor = lock.lock().unwrap();
+            let monitor = lock.lock().unwrap();
 
             println!("ALLOCATION REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
 
@@ -79,8 +78,66 @@ mod rust_examples {
 		        return false;
 	        }
 
+            let safe = false;
+
+            // try to allocate until the state is safe
+	        while !safe {
+
+                // check if resource is available; if not, sleep until
+    		    // resource becomes available
+                let arc_for_iteration = Arc::clone(&self.m_monitor_mutex);
+                let mut safe_monitor = arc_for_iteration.lock().unwrap();
+                let available = safe_monitor.m_available[resource];
+
+		        if amount > available { //monitor.m_available[resource] {
+			        println!("RESOURCE NOT AVAILABLE: SUSPENDING PROCESS {}", process);
+			        //printState();
+			        self.m_monitor_cv[resource].wait(safe_monitor).unwrap();
+                    continue;
+		        }
+
+
+		        // simulate allocation
+		        safe_monitor.m_alloc[resource][process] += amount;
+		        safe_monitor.m_available[resource] -= amount;
+
+
+		        // check if the state is safe
+		        //safe = isSafe();
+		        //safe = true;	// uncomment this line to disable resource allocation denial
+
+
+		        // if state is not safe, restore the original
+		        // state and suspend
+		        if !safe {
+
+			        // unsafe state detected
+
+			        safe_monitor.m_alloc[resource][process] -= amount;
+			        safe_monitor.m_available[resource] += amount;
+			
+
+			        // suspend is state is unsafe
+			        // (will wake-up when resources will be freed)
+	
+			        println!("UNSAFE STATE DETECTED: SUSPENDING PROCESS {}", process);
+			        //printState();
+			        self.m_monitor_cv[resource].wait(safe_monitor).unwrap();
+                    
+			        continue;
+		        }
+	        }   
+
+        	// state is safe
+
+	        println!("SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS {}", process);
+	        //printState();
+
+	        // pthread_mutex_unlock(&m_monitor_mutex);
+            // No need to unlock, data goes out of scope 
             return true;
         }
+
         // fn releaseResource(process: i32, resource: i32, amount: i32) -> bool;
         // fn terminateProcess(process: i32) -> bool;
     

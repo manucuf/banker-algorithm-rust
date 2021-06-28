@@ -60,7 +60,7 @@ mod rust_examples {
         pub fn allocate_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
 
             let lock = &*self.m_monitor_mutex;
-            let monitor = lock.lock().unwrap();
+            let mut monitor = lock.lock().unwrap();
 
             println!("ALLOCATION REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
 
@@ -85,25 +85,23 @@ mod rust_examples {
 
                 // check if resource is available; if not, sleep until
     		    // resource becomes available
-                let arc_for_iteration = Arc::clone(&self.m_monitor_mutex);
-                let mut safe_monitor = arc_for_iteration.lock().unwrap();
-                let available = safe_monitor.m_available[resource];
+                let available = monitor.m_available[resource];
 
 		        if amount > available { //monitor.m_available[resource] {
 			        println!("RESOURCE NOT AVAILABLE: SUSPENDING PROCESS {}", process);
-                    BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*safe_monitor);
-			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
+                    BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&monitor);
+			        monitor = self.m_monitor_cv[resource].wait(monitor).unwrap();
                     continue;
 		        }
 
 
 		        // simulate allocation
-		        safe_monitor.m_alloc[resource][process] += amount;
-		        safe_monitor.m_available[resource] -= amount;
+		        monitor.m_alloc[resource][process] += amount;
+		        monitor.m_available[resource] -= amount;
 
 
 		        // check if the state is safe
-		        safe = BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::is_safe(&*safe_monitor);
+		        safe = BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::is_safe(&*monitor);
 		        //safe = true;	// uncomment this line to disable resource allocation denial
 
 
@@ -113,15 +111,15 @@ mod rust_examples {
 
 			        // unsafe state detected
 
-			        safe_monitor.m_alloc[resource][process] -= amount;
-			        safe_monitor.m_available[resource] += amount;
+			        monitor.m_alloc[resource][process] -= amount;
+			        monitor.m_available[resource] += amount;
 			
 			        // suspend is state is unsafe
 			        // (will wake-up when resources will be freed)
 	
 			        println!("UNSAFE STATE DETECTED: SUSPENDING PROCESS {}", process);
-			        BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*safe_monitor);
-			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
+			        BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&monitor);
+			        monitor = self.m_monitor_cv[resource].wait(monitor).unwrap();
                     
 			        continue;
 		        }
@@ -130,7 +128,7 @@ mod rust_examples {
         	// state is safe
 
 	        println!("SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS {}", process);
-            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*monitor);
+            //BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&monitor);
 
 	        // pthread_mutex_unlock(&m_monitor_mutex);
             // No need to unlock, data goes out of scope 

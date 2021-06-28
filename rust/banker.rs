@@ -138,7 +138,7 @@ mod rust_examples {
         }
 
 
-        fn release_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
+        pub fn release_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
 
             let lock = &*self.m_monitor_mutex;
             let mut monitor = lock.lock().unwrap();
@@ -175,7 +175,7 @@ mod rust_examples {
 
         }
 
-        fn terminate_process(&self, process: usize) -> bool {
+        pub fn terminate_process(&self, process: usize) -> bool {
 
             let lock = &*self.m_monitor_mutex;
             let mut monitor = lock.lock().unwrap();
@@ -333,8 +333,23 @@ mod rust_examples {
     }
 }
 
+
+
+
+
+
+use std::{thread, time};
+
 const NUM_RES: usize = 3;
 const NUM_PROC: usize = 3;
+
+const PROC1: usize = 0;
+const PROC2: usize = 1;
+const PROC3: usize = 2;
+
+const RES1: usize = 0;
+const RES2: usize = 1;
+const RES3: usize = 2;
 
 fn main() {
 
@@ -345,7 +360,54 @@ fn main() {
     ];
     let resources = [ 100, 1, 1 ];
 
-    let _banker_algorithm = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
+    let child1 = thread::spawn(move || {
+        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
+    	banker.allocate_resource(PROC1, RES1, 40);
+        thread::sleep(time::Duration::from_millis(5000));
 
-    println!("It works!");
+	    banker.allocate_resource(PROC1, RES1, 30);
+	    banker.allocate_resource(PROC1, RES2, 1);
+	    thread::sleep(time::Duration::from_millis(5000));
+
+	    // release resources
+	    banker.terminate_process(PROC1);
+    });
+
+
+    let child2 = thread::spawn(move || {
+        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
+        thread::sleep(time::Duration::from_millis(1000));
+
+    	banker.allocate_resource(PROC2, RES1, 40);
+        thread::sleep(time::Duration::from_millis(5000));
+
+	    banker.allocate_resource(PROC2, RES1, 30);
+	    banker.allocate_resource(PROC2, RES2, 1);
+	    thread::sleep(time::Duration::from_millis(5000));
+
+	    // release resources
+	    banker.terminate_process(PROC2);
+    });
+
+    let child3 = thread::spawn(move || {
+        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
+        thread::sleep(time::Duration::from_millis(2000));
+
+    	banker.allocate_resource(PROC3, RES1, 10);
+        thread::sleep(time::Duration::from_millis(4000));
+
+	    banker.allocate_resource(PROC3, RES1, 40);
+	    banker.allocate_resource(PROC3, RES3, 1);
+	    thread::sleep(time::Duration::from_millis(4000));
+
+	    // release resources
+	    banker.terminate_process(PROC3);
+    });
+
+    let _res1 = child1.join();
+    let _res2 = child2.join();
+    let _res3 = child3.join();
+
+
+    println!("Simulation correctly terminated");
 }

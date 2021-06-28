@@ -91,7 +91,7 @@ mod rust_examples {
 
 		        if amount > available { //monitor.m_available[resource] {
 			        println!("RESOURCE NOT AVAILABLE: SUSPENDING PROCESS {}", process);
-			        //printState();
+                    BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*safe_monitor);
 			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
                     continue;
 		        }
@@ -120,7 +120,7 @@ mod rust_examples {
 			        // (will wake-up when resources will be freed)
 	
 			        println!("UNSAFE STATE DETECTED: SUSPENDING PROCESS {}", process);
-			        //printState();
+			        BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*safe_monitor);
 			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
                     
 			        continue;
@@ -130,7 +130,7 @@ mod rust_examples {
         	// state is safe
 
 	        println!("SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS {}", process);
-	        //printState();
+            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*monitor);
 
 	        // pthread_mutex_unlock(&m_monitor_mutex);
             // No need to unlock, data goes out of scope 
@@ -163,7 +163,7 @@ mod rust_examples {
             monitor.m_available[resource] += amount;
         
             println!("RESOURCE RELEASED BY PROCESS {}", process);
-            //printState();
+            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*monitor);
         
             // wake-up suspended processes
             self.m_monitor_cv[resource].notify_all();
@@ -211,7 +211,7 @@ mod rust_examples {
 	        // mark process as "inactive"
 	        monitor.m_running[process] = false;
 
-	        //printState();
+            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*monitor);
 
             // Automatic unlock
 	        return true;
@@ -290,7 +290,46 @@ mod rust_examples {
             return rest_processes.len() == 0;
         }
     
-        fn print_state() {}
+        fn print_state(monitor: &BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>) {
+
+            for i in 0..monitor.m_num_resources {
+        
+                if i == 0 {
+                    print!("\nALLOCATED (CLAIM)\n\n");
+                    print!("+-->   \t\tProcessi\n");
+                    print!("|\n");
+                    print!("V\n");
+                    print!("Risorse\t\t");
+        
+                } else {
+        
+                    print!("       \t\t");
+                }
+        
+        
+                for j in 0..monitor.m_num_processes {
+                    print!("{} ({})\t", monitor.m_alloc[i][j], monitor.m_claim[i][j]);
+                }
+        
+                println!();
+            }
+
+            println!();
+            println!();        
+        
+            print!("\nAVAILABLE (TOTAL)\n\n");
+        
+            for i in 0..monitor.m_num_resources {
+                print!("{} ({})\t", monitor.m_available[i], monitor.m_resources[i]);
+            }
+        
+            println!();
+            println!();
+            println!("--------------------------------------------");
+            println!();
+        
+        }
+
     }
 }
 

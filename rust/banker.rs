@@ -1,5 +1,5 @@
 #[allow(unused_imports)]
-#[allow(unused_variables)]
+//#[allow(unused_variables)]
 #[allow(dead_code)]
 
 mod rust_examples {
@@ -50,7 +50,7 @@ mod rust_examples {
         fn init_cv(resources: [usize; NUM_RESOURCES]) -> Vec<Arc<Condvar>> {
             let mut v: Vec<Arc<Condvar>> = Vec::new();
             
-            for resource in resources.iter() {
+            for _ in resources.iter() {
                 v.push(Arc::new(Condvar::new()));
             }
             v
@@ -59,7 +59,6 @@ mod rust_examples {
         pub fn allocate_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
 
             let lock = &*self.m_monitor_mutex;
-            //let mut monitor = lock.lock().unwrap();
             let monitor = lock.lock().unwrap();
 
             println!("ALLOCATION REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
@@ -92,7 +91,7 @@ mod rust_examples {
 		        if amount > available { //monitor.m_available[resource] {
 			        println!("RESOURCE NOT AVAILABLE: SUSPENDING PROCESS {}", process);
 			        //printState();
-			        let result = self.m_monitor_cv[resource].wait(safe_monitor);
+			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
                     continue;
 		        }
 
@@ -116,13 +115,12 @@ mod rust_examples {
 			        safe_monitor.m_alloc[resource][process] -= amount;
 			        safe_monitor.m_available[resource] += amount;
 			
-
 			        // suspend is state is unsafe
 			        // (will wake-up when resources will be freed)
 	
 			        println!("UNSAFE STATE DETECTED: SUSPENDING PROCESS {}", process);
 			        //printState();
-			        let result = self.m_monitor_cv[resource].wait(safe_monitor);
+			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
                     
 			        continue;
 		        }
@@ -138,8 +136,85 @@ mod rust_examples {
             return true;
         }
 
-        // fn releaseResource(process: i32, resource: i32, amount: i32) -> bool;
-        // fn terminateProcess(process: i32) -> bool;
+
+        fn release_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
+
+            let lock = &*self.m_monitor_mutex;
+            let mut monitor = lock.lock().unwrap();
+
+            println!("RELEASE REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
+
+	        // check parameter correctness
+	        if resource >= NUM_RESOURCES || process >= NUM_PROCESSES {
+	        	println!("WRONG PARAMETERS IN RELEASE REQUEST");
+                // Automatic unlock
+	        	return false;
+	        }
+
+	        // check if resource is actually allocated to the process
+	        if monitor.m_alloc[resource][process] < amount {
+	        	println!("WRONG RELEASE REQUEST BY PROCESS {}", process);
+	        	// Automatic unlock
+	        	return false;
+	        }
+
+            monitor.m_alloc[resource][process] -= amount;
+            monitor.m_available[resource] += amount;
+        
+            println!("RESOURCE RELEASED BY PROCESS {}", process);
+            //printState();
+        
+            // wake-up suspended processes
+            self.m_monitor_cv[resource].notify_all();
+        
+            // pthread_mutex_unlock(&m_monitor_mutex);
+            // automatic unlock
+        
+            return true;
+
+        }
+
+        fn terminate_process(&self, process: usize) -> bool {
+
+            let lock = &*self.m_monitor_mutex;
+            let mut monitor = lock.lock().unwrap();
+
+	        println!("DEALLOCATION OF PROCESS {}\n", process);
+
+	        // check parameter correctness
+	        if process >= NUM_PROCESSES {
+	        	println!("WRONG PARAMETERS IN TERMINATION REQUEST");
+	        	// Automatic unlock
+	        	return false;
+	        }
+
+	        // check if process is running
+	        if monitor.m_running[process] == false {
+	        	println!("PROCESS ALREADY TERMINATED");
+	        	// Automatic unlock
+	        	return false;
+	        }
+
+	        // release all resources
+	        for resource in 0..monitor.m_num_resources {
+
+                if monitor.m_alloc[resource][process] > 0 {
+                    monitor.m_available[resource] += monitor.m_alloc[resource][process];
+                    monitor.m_alloc[resource][process] = 0;
+        
+                    // wake-up suspended processes waiting for a resource
+                    self.m_monitor_cv[resource].notify_all()
+                }
+            }
+
+	        // mark process as "inactive"
+	        monitor.m_running[process] = false;
+
+	        //printState();
+
+            // Automatic unlock
+	        return true;
+        }
     
         fn is_safe() -> bool {
             return true;

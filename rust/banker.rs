@@ -128,7 +128,7 @@ mod rust_examples {
         	// state is safe
 
 	        println!("SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS {}", process);
-            //BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&monitor);
+            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&monitor);
 
 	        // pthread_mutex_unlock(&m_monitor_mutex);
             // No need to unlock, data goes out of scope 

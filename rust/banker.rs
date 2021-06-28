@@ -6,6 +6,7 @@ mod rust_examples {
 
     use std::thread;
     use std::sync::{Arc, Mutex, Condvar};
+    use std::collections::LinkedList;
 
     pub struct BankerAlgorithm<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
         m_monitor_mutex: Arc<Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>>,
@@ -77,7 +78,7 @@ mod rust_examples {
 		        return false;
 	        }
 
-            let safe = false;
+            let mut safe = false;
 
             // try to allocate until the state is safe
 	        while !safe {
@@ -102,7 +103,7 @@ mod rust_examples {
 
 
 		        // check if the state is safe
-		        //safe = isSafe();
+		        safe = BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::is_safe(&*safe_monitor);
 		        //safe = true;	// uncomment this line to disable resource allocation denial
 
 
@@ -216,14 +217,81 @@ mod rust_examples {
 	        return true;
         }
     
-        fn is_safe() -> bool {
-            return true;
+        fn is_safe(monitor: &BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>) -> bool {
+        
+            // array for simulating resource availability
+            let mut currentavail = monitor.m_available.clone();
+            
+            let mut rest_processes: Vec<usize> = Vec::new(); //LinkedList<usize> = LinkedList::new(); // Vec<usize> = Vec::new();
+            let mut safe_sequence:  Vec<usize> = Vec::new(); //LinkedList<usize> = LinkedList::new(); // Vec<usize> = Vec::new();
+
+	        // the safe state is checked by only considering "running" processes
+	        for i in 0..monitor.m_num_processes {
+		        if monitor.m_running[i] == true {
+                    //rest_processes.push_back(i);
+                    rest_processes.push(i);
+                }
+	        }
+
+	        let mut possible = true;
+            let mut curr_proc = 0;
+
+	        while possible {
+
+	            // find a process such that (claim - alloc <= currentavail)
+	            let mut found = false;
+                //let mut it = rest_processes.iter();
+                
+                let mut index = 0;
+	            while !found && index < rest_processes.len()/* it != None*/ {
+
+	                found = true;
+	     		    curr_proc = rest_processes[index]; //it.next();
+
+                    for i in 0..monitor.m_num_resources {
+                        if monitor.m_claim[i][curr_proc] - monitor.m_alloc[i][curr_proc] > currentavail[i] {
+             				found = false;
+                        }
+                    }
+
+                    if !found {
+                        index += 1;
+                        //continue;
+                    }
+                }
+
+	            if found {
+			        // simulate execution of process "curr_proc"
+			        for i in 0..monitor.m_num_resources {
+				        currentavail[i] += monitor.m_alloc[i][curr_proc];
+			        }
+
+
+                    // spero faccia la stessa cosa di rest_processes.erase(it);
+                    rest_processes.remove(rest_processes.iter().position(|x| *x == curr_proc).unwrap()); 
+	                safe_sequence.push(curr_proc); //safe_sequence.push_back(curr_proc);
+                } else {
+			        possible = false;
+		        }
+	        }
+            
+	        if rest_processes.len() == 0 {
+
+	            // print safe process sequence found
+	            println!("\nSAFE PROCESS SEQUENCE: ");
+
+                for elem in safe_sequence {
+                    print!("{} ", elem);
+                }
+
+                println!("\n");
+            }
+
+            return rest_processes.len() == 0;
         }
     
         fn print_state() {}
     }
-
-
 }
 
 const NUM_RES: usize = 3;

@@ -8,12 +8,12 @@ mod rust_examples {
     use std::sync::{Arc, Mutex, Condvar};
     use std::collections::LinkedList;
 
-    pub struct BankerAlgorithm<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
-        m_monitor_mutex: Arc<Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>>,
-        m_monitor_cv: Vec<Arc<Condvar>>,
-    }
+    // pub struct BankerAlgorithm<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
+    //     m_monitor_mutex: Arc<Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>>,
+    //     m_monitor_cv: Vec<Arc<Condvar>>,
+    // }
 
-    struct BankerAlgorithmData<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
+    pub struct BankerAlgorithm<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
         m_num_resources: usize,
         m_num_processes: usize,
         m_resources: [usize; NUM_RESOURCES],
@@ -21,12 +21,14 @@ mod rust_examples {
         m_available: [usize; NUM_RESOURCES],
         m_alloc: [[usize; NUM_RESOURCES]; NUM_PROCESSES],
         m_running: [bool; NUM_PROCESSES],
+
+        m_mutex_cond: Vec<Arc<(Mutex<usize>, Condvar)>>,
     }
     
-    impl<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>  {
+    impl<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES>  {
     
-        fn new(resources: [usize; NUM_RESOURCES], claim: [[usize; NUM_RESOURCES]; NUM_PROCESSES]) -> BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES> {
-            BankerAlgorithmData {
+        pub fn new(resources: [usize; NUM_RESOURCES], claim: [[usize; NUM_RESOURCES]; NUM_PROCESSES]) -> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
+            BankerAlgorithm {
                 m_num_resources: NUM_RESOURCES,
                 m_num_processes: NUM_PROCESSES,
                 m_resources: resources.clone(),
@@ -34,33 +36,24 @@ mod rust_examples {
                 m_claim: claim.clone(),
                 m_alloc: [[0; NUM_RESOURCES]; NUM_PROCESSES],
                 m_running: [true; NUM_PROCESSES],
-            }
-        }
-    }
 
-    impl<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
-
-
-        pub fn new(resources: [usize; NUM_RESOURCES], claim: [[usize; NUM_RESOURCES]; NUM_PROCESSES]) -> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
-            BankerAlgorithm {
-                m_monitor_mutex: Arc::new(Mutex::new(BankerAlgorithmData::<NUM_RESOURCES, NUM_PROCESSES>::new(resources, claim))),
-                m_monitor_cv: BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::init_cv(resources),
+                m_mutex_cond: BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::init_cv(resources),
             }
         }
 
-        fn init_cv(resources: [usize; NUM_RESOURCES]) -> Vec<Arc<Condvar>> {
-            let mut v: Vec<Arc<Condvar>> = Vec::new();
+        fn init_cv(resources: [usize; NUM_RESOURCES]) -> Vec<Arc<(Mutex<usize>, Condvar)>> {
+            let mut v: Vec<Arc<(Mutex<usize>, Condvar)>> = Vec::new();
             
-            for _ in resources.iter() {
-                v.push(Arc::new(Condvar::new()));
+            for elem in resources.iter() {
+                v.push(Arc::new((Mutex::new(*elem), Condvar::new())));
             }
             v
         }
 
-        pub fn allocate_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
+        pub fn allocate_resource(&mut self, process: usize, resource: usize, amount: usize) -> bool {
 
-            let lock = &*self.m_monitor_mutex;
-            let monitor = lock.lock().unwrap();
+            let (lock, cvar) = &*self.m_mutex_cond[resource];
+            let _res = lock.lock();
 
             println!("ALLOCATION REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
 
@@ -71,12 +64,13 @@ mod rust_examples {
 		        return false;
 	        }
 
-            	// check if request is consistent with the claim
-	        if monitor.m_alloc[resource][process] + amount > monitor.m_claim[resource][process] {
+            // check if request is consistent with the claim
+	        if self.m_alloc[resource][process] + amount > self.m_claim[resource][process] {
 		        println!("WRONG RESOURCE REQUEST BY PROCESS {}", process);
                 // No need to unlock, data goes out of scope
 		        return false;
 	        }
+
 
             let mut safe = false;
 
@@ -85,25 +79,26 @@ mod rust_examples {
 
                 // check if resource is available; if not, sleep until
     		    // resource becomes available
-                let arc_for_iteration = Arc::clone(&self.m_monitor_mutex);
-                let mut safe_monitor = arc_for_iteration.lock().unwrap();
-                let available = safe_monitor.m_available[resource];
+                let arc = Arc::clone(&self.m_mutex_cond[resource]);
+                let safe_monitor = arc.0.lock().unwrap();
+
+                let available = self.m_available[resource];
 
 		        if amount > available { //monitor.m_available[resource] {
 			        println!("RESOURCE NOT AVAILABLE: SUSPENDING PROCESS {}", process);
-                    BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*safe_monitor);
-			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
+                    BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*self);
+			        let _result = cvar.wait(safe_monitor);
                     continue;
 		        }
 
 
 		        // simulate allocation
-		        safe_monitor.m_alloc[resource][process] += amount;
-		        safe_monitor.m_available[resource] -= amount;
+		        self.m_alloc[resource][process] += amount;
+		        self.m_available[resource] -= amount;
 
 
 		        // check if the state is safe
-		        safe = BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::is_safe(&*safe_monitor);
+		        safe = BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::is_safe(&*self);
 		        //safe = true;	// uncomment this line to disable resource allocation denial
 
 
@@ -113,15 +108,15 @@ mod rust_examples {
 
 			        // unsafe state detected
 
-			        safe_monitor.m_alloc[resource][process] -= amount;
-			        safe_monitor.m_available[resource] += amount;
+			        self.m_alloc[resource][process] -= amount;
+			        self.m_available[resource] += amount;
 			
 			        // suspend is state is unsafe
 			        // (will wake-up when resources will be freed)
 	
 			        println!("UNSAFE STATE DETECTED: SUSPENDING PROCESS {}", process);
-			        BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*safe_monitor);
-			        let _result = self.m_monitor_cv[resource].wait(safe_monitor);
+			        BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*self);
+			        let _result = cvar.wait(safe_monitor);
                     
 			        continue;
 		        }
@@ -130,7 +125,7 @@ mod rust_examples {
         	// state is safe
 
 	        println!("SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS {}", process);
-            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*monitor);
+            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*self);
 
 	        // pthread_mutex_unlock(&m_monitor_mutex);
             // No need to unlock, data goes out of scope 
@@ -138,10 +133,10 @@ mod rust_examples {
         }
 
 
-        pub fn release_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
+        pub fn release_resource(&mut self, process: usize, resource: usize, amount: usize) -> bool {
 
-            let lock = &*self.m_monitor_mutex;
-            let mut monitor = lock.lock().unwrap();
+            let (lock, cvar) = &*self.m_mutex_cond[resource];
+            let _res = lock.lock();
 
             println!("RELEASE REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
 
@@ -153,20 +148,20 @@ mod rust_examples {
 	        }
 
 	        // check if resource is actually allocated to the process
-	        if monitor.m_alloc[resource][process] < amount {
+	        if self.m_alloc[resource][process] < amount {
 	        	println!("WRONG RELEASE REQUEST BY PROCESS {}", process);
 	        	// Automatic unlock
 	        	return false;
 	        }
 
-            monitor.m_alloc[resource][process] -= amount;
-            monitor.m_available[resource] += amount;
+            self.m_alloc[resource][process] -= amount;
+            self.m_available[resource] += amount;
         
             println!("RESOURCE RELEASED BY PROCESS {}", process);
-            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*monitor);
+            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*self);
         
             // wake-up suspended processes
-            self.m_monitor_cv[resource].notify_all();
+            cvar.notify_all();
         
             // pthread_mutex_unlock(&m_monitor_mutex);
             // automatic unlock
@@ -175,10 +170,8 @@ mod rust_examples {
 
         }
 
-        pub fn terminate_process(&self, process: usize) -> bool {
+        pub fn terminate_process(&mut self, process: usize) -> bool {
 
-            let lock = &*self.m_monitor_mutex;
-            let mut monitor = lock.lock().unwrap();
 
 	        println!("DEALLOCATION OF PROCESS {}\n", process);
 
@@ -190,44 +183,47 @@ mod rust_examples {
 	        }
 
 	        // check if process is running
-	        if monitor.m_running[process] == false {
+	        if self.m_running[process] == false {
 	        	println!("PROCESS ALREADY TERMINATED");
 	        	// Automatic unlock
 	        	return false;
 	        }
 
 	        // release all resources
-	        for resource in 0..monitor.m_num_resources {
+	        for resource in 0..self.m_num_resources {
 
-                if monitor.m_alloc[resource][process] > 0 {
-                    monitor.m_available[resource] += monitor.m_alloc[resource][process];
-                    monitor.m_alloc[resource][process] = 0;
+                let (lock, cvar) = &*self.m_mutex_cond[resource];
+                let _res = lock.lock();
+
+                if self.m_alloc[resource][process] > 0 {
+                    self.m_available[resource] += self.m_alloc[resource][process];
+                    self.m_alloc[resource][process] = 0;
         
                     // wake-up suspended processes waiting for a resource
-                    self.m_monitor_cv[resource].notify_all()
+                    cvar.notify_all()
                 }
             }
 
 	        // mark process as "inactive"
-	        monitor.m_running[process] = false;
+	        self.m_running[process] = false;
 
-            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*monitor);
+            BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::print_state(&*self);
 
             // Automatic unlock
 	        return true;
         }
     
-        fn is_safe(monitor: &BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>) -> bool {
+        fn is_safe(b: &BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES>) -> bool {
         
             // array for simulating resource availability
-            let mut currentavail = monitor.m_available.clone();
+            let mut currentavail = b.m_available.clone();
             
             let mut rest_processes: Vec<usize> = Vec::new(); //LinkedList<usize> = LinkedList::new(); // Vec<usize> = Vec::new();
             let mut safe_sequence:  Vec<usize> = Vec::new(); //LinkedList<usize> = LinkedList::new(); // Vec<usize> = Vec::new();
 
 	        // the safe state is checked by only considering "running" processes
-	        for i in 0..monitor.m_num_processes {
-		        if monitor.m_running[i] == true {
+	        for i in 0..b.m_num_processes {
+		        if b.m_running[i] == true {
                     //rest_processes.push_back(i);
                     rest_processes.push(i);
                 }
@@ -248,8 +244,8 @@ mod rust_examples {
 	                found = true;
 	     		    curr_proc = rest_processes[index]; //it.next();
 
-                    for i in 0..monitor.m_num_resources {
-                        if monitor.m_claim[i][curr_proc] - monitor.m_alloc[i][curr_proc] > currentavail[i] {
+                    for i in 0..b.m_num_resources {
+                        if b.m_claim[i][curr_proc] - b.m_alloc[i][curr_proc] > currentavail[i] {
              				found = false;
                         }
                     }
@@ -262,8 +258,8 @@ mod rust_examples {
 
 	            if found {
 			        // simulate execution of process "curr_proc"
-			        for i in 0..monitor.m_num_resources {
-				        currentavail[i] += monitor.m_alloc[i][curr_proc];
+			        for i in 0..b.m_num_resources {
+				        currentavail[i] += b.m_alloc[i][curr_proc];
 			        }
 
 
@@ -290,9 +286,9 @@ mod rust_examples {
             return rest_processes.len() == 0;
         }
     
-        fn print_state(monitor: &BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>) {
+        fn print_state(b: &BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES>) {
 
-            for i in 0..monitor.m_num_resources {
+            for i in 0..b.m_num_resources {
         
                 if i == 0 {
                     print!("\nALLOCATED (CLAIM)\n\n");
@@ -307,8 +303,8 @@ mod rust_examples {
                 }
         
         
-                for j in 0..monitor.m_num_processes {
-                    print!("{} ({})\t", monitor.m_alloc[i][j], monitor.m_claim[i][j]);
+                for j in 0..b.m_num_processes {
+                    print!("{} ({})\t", b.m_alloc[i][j], b.m_claim[i][j]);
                 }
         
                 println!();
@@ -319,8 +315,8 @@ mod rust_examples {
         
             print!("\nAVAILABLE (TOTAL)\n\n");
         
-            for i in 0..monitor.m_num_resources {
-                print!("{} ({})\t", monitor.m_available[i], monitor.m_resources[i]);
+            for i in 0..b.m_num_resources {
+                print!("{} ({})\t", b.m_available[i], b.m_resources[i]);
             }
         
             println!();
@@ -361,7 +357,7 @@ fn main() {
     let resources = [ 100, 1, 1 ];
 
     let child1 = thread::spawn(move || {
-        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
+        let mut banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
     	banker.allocate_resource(PROC1, RES1, 40);
         thread::sleep(time::Duration::from_millis(5000));
 
@@ -375,7 +371,7 @@ fn main() {
 
 
     let child2 = thread::spawn(move || {
-        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
+        let mut banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
         thread::sleep(time::Duration::from_millis(1000));
 
     	banker.allocate_resource(PROC2, RES1, 40);
@@ -390,7 +386,7 @@ fn main() {
     });
 
     let child3 = thread::spawn(move || {
-        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
+        let mut banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
         thread::sleep(time::Duration::from_millis(2000));
 
     	banker.allocate_resource(PROC3, RES1, 10);

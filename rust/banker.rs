@@ -1,12 +1,10 @@
-#[allow(unused_imports)]
+//#[allow(unused_imports)]
 //#[allow(unused_variables)]
 #[allow(dead_code)]
 
 mod rust_examples {
 
-    use std::thread;
     use std::sync::{Arc, Mutex, Condvar};
-    use std::collections::LinkedList;
 
     pub struct BankerAlgorithm<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
         m_monitor_mutex: Arc<Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>>,

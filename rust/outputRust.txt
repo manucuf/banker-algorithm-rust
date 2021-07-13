@@ -1,0 +1,277 @@
+ALLOCATION REQUEST BY PROCESS 0 : RESOURCE 0 --> 40
+
+SAFE PROCESS SEQUENCE: 
+0 1 2 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 0
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		40 (70)	0 (70)	0 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+60 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 1 : RESOURCE 0 --> 40
+
+SAFE PROCESS SEQUENCE: 
+1 0 2 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 1
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	40 (70)	0 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+60 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 2 : RESOURCE 0 --> 10
+
+SAFE PROCESS SEQUENCE: 
+0 1 2 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 2
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	10 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+90 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 0 : RESOURCE 0 --> 30
+
+SAFE PROCESS SEQUENCE: 
+0 1 2 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 0
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		70 (70)	0 (70)	0 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+30 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 0 : RESOURCE 1 --> 1
+
+SAFE PROCESS SEQUENCE: 
+0 1 2 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 0
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		70 (70)	0 (70)	0 (50)	
+       		1 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+30 (100)	0 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 1 : RESOURCE 0 --> 30
+
+SAFE PROCESS SEQUENCE: 
+1 0 2 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 1
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	70 (70)	0 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+30 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 1 : RESOURCE 1 --> 1
+
+SAFE PROCESS SEQUENCE: 
+1 0 2 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 1
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	70 (70)	0 (50)	
+       		0 (1)	1 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+30 (100)	0 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 2 : RESOURCE 0 --> 40
+
+SAFE PROCESS SEQUENCE: 
+2 0 1 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 2
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	50 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+50 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 2 : RESOURCE 2 --> 1
+
+SAFE PROCESS SEQUENCE: 
+2 0 1 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 2
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	50 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	1 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+50 (100)	1 (1)	0 (1)	
+
+--------------------------------------------
+
+DEALLOCATION OF PROCESS 0
+
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	0 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+100 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+DEALLOCATION OF PROCESS 2
+
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	0 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+100 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+DEALLOCATION OF PROCESS 1
+
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	0 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+100 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+Simulation correctly terminated

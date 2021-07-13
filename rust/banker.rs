@@ -252,7 +252,7 @@ mod rust_examples {
 
                     if !found {
                         index += 1;
-                        //continue;
+                        continue;
                     }
                 }
 

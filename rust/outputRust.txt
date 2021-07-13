@@ -118,8 +118,35 @@ AVAILABLE (TOTAL)
 
 --------------------------------------------
 
+ALLOCATION REQUEST BY PROCESS 2 : RESOURCE 0 --> 40
+
+SAFE PROCESS SEQUENCE: 
+2 0 1 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 2
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	50 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	0 (1)	
+
+
+
+AVAILABLE (TOTAL)
+
+50 (100)	1 (1)	1 (1)	
 ALLOCATION REQUEST BY PROCESS 1 : RESOURCE 0 --> 30
 
+--------------------------------------------
+
+ALLOCATION REQUEST BY PROCESS 2 : RESOURCE 2 --> 1
+
+SAFE PROCESS SEQUENCE: 
+2 
 SAFE PROCESS SEQUENCE: 
 1 0 2 
 
@@ -134,11 +161,32 @@ Risorse		0 (70)	70 (70)	0 (50)
        		0 (1)	0 (1)	0 (0)	
        		0 (0)	0 (0)	0 (1)	
 
+0 1 
+
+SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 2
+
+ALLOCATED (CLAIM)
+
++-->   		Processi
+|
+V
+Risorse		0 (70)	0 (70)	50 (50)	
+       		0 (1)	0 (1)	0 (0)	
+       		0 (0)	0 (0)	1 (1)	
+
 
 
 AVAILABLE (TOTAL)
 
+50 (100)	1 (1)	0 (1)	
+
+AVAILABLE (TOTAL)
+
 30 (100)	1 (1)	1 (1)	
+
+--------------------------------------------
+
+
 
 --------------------------------------------
 
@@ -163,54 +211,6 @@ Risorse		0 (70)	70 (70)	0 (50)
 AVAILABLE (TOTAL)
 
 30 (100)	0 (1)	1 (1)	
-
---------------------------------------------
-
-ALLOCATION REQUEST BY PROCESS 2 : RESOURCE 0 --> 40
-
-SAFE PROCESS SEQUENCE: 
-2 0 1 
-
-SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 2
-
-ALLOCATED (CLAIM)
-
-+-->   		Processi
-|
-V
-Risorse		0 (70)	0 (70)	50 (50)	
-       		0 (1)	0 (1)	0 (0)	
-       		0 (0)	0 (0)	0 (1)	
-
-
-
-AVAILABLE (TOTAL)
-
-50 (100)	1 (1)	1 (1)	
-
---------------------------------------------
-
-ALLOCATION REQUEST BY PROCESS 2 : RESOURCE 2 --> 1
-
-SAFE PROCESS SEQUENCE: 
-2 0 1 
-
-SAFE STATE DETECTED: ALLOCATION GRANTED TO PROCESS 2
-
-ALLOCATED (CLAIM)
-
-+-->   		Processi
-|
-V
-Risorse		0 (70)	0 (70)	50 (50)	
-       		0 (1)	0 (1)	0 (0)	
-       		0 (0)	0 (0)	1 (1)	
-
-
-
-AVAILABLE (TOTAL)
-
-50 (100)	1 (1)	0 (1)	
 
 --------------------------------------------
 

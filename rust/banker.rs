@@ -1,14 +1,12 @@
-//#[allow(unused_imports)]
-//#[allow(unused_variables)]
 #[allow(dead_code)]
 
 mod rust_examples {
 
-    use std::sync::{Arc, Mutex, Condvar};
+    use std::sync::{Mutex, Condvar};
 
     pub struct BankerAlgorithm<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
-        m_monitor_mutex: Arc<Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>>,
-        m_monitor_cv: Vec<Arc<Condvar>>,
+        m_monitor_mutex: Mutex<BankerAlgorithmData<NUM_RESOURCES, NUM_PROCESSES>>,
+        m_monitor_cv: Vec<Condvar>,
     }
 
     struct BankerAlgorithmData<const NUM_RESOURCES: usize, const NUM_PROCESSES: usize> {
@@ -41,23 +39,23 @@ mod rust_examples {
 
         pub fn new(resources: [usize; NUM_RESOURCES], claim: [[usize; NUM_RESOURCES]; NUM_PROCESSES]) -> BankerAlgorithm<NUM_RESOURCES, NUM_PROCESSES> {
             BankerAlgorithm {
-                m_monitor_mutex: Arc::new(Mutex::new(BankerAlgorithmData::<NUM_RESOURCES, NUM_PROCESSES>::new(resources, claim))),
+                m_monitor_mutex: Mutex::new(BankerAlgorithmData::<NUM_RESOURCES, NUM_PROCESSES>::new(resources, claim)),
                 m_monitor_cv: BankerAlgorithm::<NUM_RESOURCES, NUM_PROCESSES>::init_cv(resources),
             }
         }
 
-        fn init_cv(resources: [usize; NUM_RESOURCES]) -> Vec<Arc<Condvar>> {
-            let mut v: Vec<Arc<Condvar>> = Vec::new();
+        fn init_cv(resources: [usize; NUM_RESOURCES]) -> Vec<Condvar> {
+            let mut v: Vec<Condvar> = Vec::new();
             
             for _ in resources.iter() {
-                v.push(Arc::new(Condvar::new()));
+                v.push(Condvar::new());
             }
             v
         }
 
         pub fn allocate_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
 
-            let lock = &*self.m_monitor_mutex;
+            let lock = &self.m_monitor_mutex;
             let mut monitor = lock.lock().unwrap();
 
             println!("ALLOCATION REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
@@ -136,7 +134,7 @@ mod rust_examples {
 
         pub fn release_resource(&self, process: usize, resource: usize, amount: usize) -> bool {
 
-            let lock = &*self.m_monitor_mutex;
+            let lock = &self.m_monitor_mutex;
             let mut monitor = lock.lock().unwrap();
 
             println!("RELEASE REQUEST BY PROCESS {} : RESOURCE {} --> {}", process, resource, amount);
@@ -173,7 +171,7 @@ mod rust_examples {
 
         pub fn terminate_process(&self, process: usize) -> bool {
 
-            let lock = &*self.m_monitor_mutex;
+            let lock = &self.m_monitor_mutex;
             let mut monitor = lock.lock().unwrap();
 
 	        println!("DEALLOCATION OF PROCESS {}\n", process);
@@ -230,7 +228,6 @@ mod rust_examples {
 	        }
 
 	        let mut possible = true;
-            let mut curr_proc = 0;
 
 	        while possible {
 
@@ -238,6 +235,8 @@ mod rust_examples {
 	            let mut found = false;
                 //let mut it = rest_processes.iter();
                 
+                let mut curr_proc = 0;
+
                 let mut index = 0;
 	            while !found && index < rest_processes.len()/* it != None*/ {
 
@@ -252,7 +251,7 @@ mod rust_examples {
 
                     if !found {
                         index += 1;
-                        continue;
+                        //continue;
                     }
                 }
 
@@ -347,6 +346,8 @@ const RES1: usize = 0;
 const RES2: usize = 1;
 const RES3: usize = 2;
 
+use std::sync::Arc;
+
 fn main() {
 
     let claim = [
@@ -356,48 +357,51 @@ fn main() {
     ];
     let resources = [ 100, 1, 1 ];
 
+    let banker_arc = Arc::new(rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim));
+    
+    let banker1 = banker_arc.clone();
+    let banker2 = banker_arc.clone();
+    let banker3 = banker_arc.clone();
+    
     let child1 = thread::spawn(move || {
-        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
-    	banker.allocate_resource(PROC1, RES1, 40);
+    	banker1.allocate_resource(PROC1, RES1, 40);
         thread::sleep(time::Duration::from_millis(5000));
 
-	    banker.allocate_resource(PROC1, RES1, 30);
-	    banker.allocate_resource(PROC1, RES2, 1);
+	    banker1.allocate_resource(PROC1, RES1, 30);
+	    banker1.allocate_resource(PROC1, RES2, 1);
 	    thread::sleep(time::Duration::from_millis(5000));
 
 	    // release resources
-	    banker.terminate_process(PROC1);
+	    banker1.terminate_process(PROC1);
     });
 
 
     let child2 = thread::spawn(move || {
-        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
         thread::sleep(time::Duration::from_millis(1000));
 
-    	banker.allocate_resource(PROC2, RES1, 40);
+    	banker2.allocate_resource(PROC2, RES1, 40);
         thread::sleep(time::Duration::from_millis(5000));
 
-	    banker.allocate_resource(PROC2, RES1, 30);
-	    banker.allocate_resource(PROC2, RES2, 1);
+	    banker2.allocate_resource(PROC2, RES1, 30);
+	    banker2.allocate_resource(PROC2, RES2, 1);
 	    thread::sleep(time::Duration::from_millis(5000));
 
 	    // release resources
-	    banker.terminate_process(PROC2);
+	    banker2.terminate_process(PROC2);
     });
 
     let child3 = thread::spawn(move || {
-        let banker = rust_examples::BankerAlgorithm::<NUM_RES, NUM_PROC>::new(resources, claim);
         thread::sleep(time::Duration::from_millis(2000));
 
-    	banker.allocate_resource(PROC3, RES1, 10);
+    	banker3.allocate_resource(PROC3, RES1, 10);
         thread::sleep(time::Duration::from_millis(4000));
 
-	    banker.allocate_resource(PROC3, RES1, 40);
-	    banker.allocate_resource(PROC3, RES3, 1);
+	    banker3.allocate_resource(PROC3, RES1, 40);
+	    banker3.allocate_resource(PROC3, RES3, 1);
 	    thread::sleep(time::Duration::from_millis(4000));
 
 	    // release resources
-	    banker.terminate_process(PROC3);
+	    banker3.terminate_process(PROC3);
     });
 
     let _res1 = child1.join();
